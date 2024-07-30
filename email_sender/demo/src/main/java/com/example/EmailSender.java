@@ -13,7 +13,6 @@ import com.microsoft.graph.models.Recipient;
 import com.microsoft.graph.models.UserSendMailParameterSet;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -23,27 +22,9 @@ import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 
 public class EmailSender {
-    private static Properties config;
 
-    static {
-        try (InputStream input = EmailSender.class.getClassLoader().getResourceAsStream("config.properties")) {
-            config = new Properties();
-            if (input == null) {
-                throw new IOException("Sorry, unable to find config.properties");
-            }
-            config.load(input);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private static final String CLIENT_ID = config.getProperty("CLIENT_ID");
-    private static final String CLIENT_SECRET = config.getProperty("CLIENT_SECRET");
-    private static final String TENANT_ID = config.getProperty("TENANT_ID");
-    private static final String USERNAME = config.getProperty("USERNAME");
-
-    public static void sendEmail(String to, String subject, String body, String[] strings) throws Exception {
-        String accessToken = getAccessToken();
+    public static void sendEmail(String clientId, String clientSecret, String tenantId, String username, String to, String subject, String body, String[] attachments) throws Exception {
+        String accessToken = getAccessToken(clientId, clientSecret, tenantId);
         if (accessToken == null) {
             throw new Exception("Impossibile ottenere il token di accesso");
         }
@@ -65,25 +46,25 @@ public class EmailSender {
             emailAddress.address = recipient.trim();
             toRecipient.emailAddress = emailAddress;
             toRecipientsList.add(toRecipient);
-}
-message.toRecipients = toRecipientsList;
+        }
+        message.toRecipients = toRecipientsList;
 
-        if (strings != null && strings.length != 0) {
+        if (attachments != null && attachments.length != 0) {
             FileAttachment attachment = new FileAttachment();
-            attachment.name = Paths.get(strings[0]).getFileName().toString();
+            attachment.name = Paths.get(attachments[0]).getFileName().toString();
             attachment.contentType = "application/pdf"; // Assumendo che sia un PDF, altrimenti modifica appropriatamente
             attachment.oDataType = "#microsoft.graph.fileAttachment";
-        
-            byte[] fileContent = Files.readAllBytes(Paths.get(strings[0]));
+
+            byte[] fileContent = Files.readAllBytes(Paths.get(attachments[0]));
             String base64Content = java.util.Base64.getEncoder().encodeToString(fileContent);
             attachment.contentBytes = base64Content.getBytes();
-        
-            LinkedList<Attachment> attachments = new LinkedList<>();
-            attachments.add(attachment);
-            message.attachments = new AttachmentCollectionPage(attachments, null);
+
+            LinkedList<Attachment> attachmentsList = new LinkedList<>();
+            attachmentsList.add(attachment);
+            message.attachments = new AttachmentCollectionPage(attachmentsList, null);
         }
 
-        graphClient.users(USERNAME)
+        graphClient.users(username)
                 .sendMail(UserSendMailParameterSet
                         .newBuilder()
                         .withMessage(message)
@@ -93,15 +74,13 @@ message.toRecipients = toRecipientsList;
                 .post();
 
         System.out.println("Email inviata con successo!");
-        String base64Content = ""; // Initialize the base64Content variable
-        System.out.println("Base64 content (primi 100 caratteri): " + base64Content.substring(0, Math.min(base64Content.length(), 100)));
     }
 
-    private static String getAccessToken() throws Exception {
-        IClientCredential credential = ClientCredentialFactory.createFromSecret(CLIENT_SECRET);
+    private static String getAccessToken(String clientId, String clientSecret, String tenantId) throws Exception {
+        IClientCredential credential = ClientCredentialFactory.createFromSecret(clientSecret);
         ConfidentialClientApplication app = ConfidentialClientApplication
-                .builder(CLIENT_ID, credential)
-                .authority("https://login.microsoftonline.com/" + TENANT_ID)
+                .builder(clientId, credential)
+                .authority("https://login.microsoftonline.com/" + tenantId)
                 .build();
 
         ClientCredentialParameters parameters = ClientCredentialParameters
@@ -120,9 +99,9 @@ message.toRecipients = toRecipientsList;
     }
 
     public static void sendEmailFromOracle(
-        String to, String subject, String body, String attachmentPath) {
+        String clientId, String clientSecret, String tenantId, String username, String to, String subject, String body, String attachmentPath) {
         try {
-            sendEmail(to, subject, body, new String[] { attachmentPath });
+            sendEmail(clientId, clientSecret, tenantId, username, to, subject, body, new String[] { attachmentPath });
             System.out.println("Email inviata con successo da Oracle!");
         } catch (Exception e) {
             System.err.println("Errore nell'invio dell'email da Oracle: " + e.getMessage());
