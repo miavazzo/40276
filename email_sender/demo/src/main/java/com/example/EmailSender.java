@@ -2,7 +2,6 @@ package com.example;
 
 import com.microsoft.aad.msal4j.*;
 import com.microsoft.graph.requests.*;
-import java.util.Properties;
 import com.microsoft.graph.models.Attachment;
 import com.microsoft.graph.models.BodyType;
 import com.microsoft.graph.models.EmailAddress;
@@ -11,8 +10,6 @@ import com.microsoft.graph.models.ItemBody;
 import com.microsoft.graph.models.Message;
 import com.microsoft.graph.models.Recipient;
 import com.microsoft.graph.models.UserSendMailParameterSet;
-
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
